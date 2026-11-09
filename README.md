@@ -28,7 +28,7 @@ This is an independent, open-source scientific tool created strictly for academi
 
 Access the live web application on any device via GitHub Pages:
 
-👉 **[https://your-username.github.io/your-repository-name/](https://your-username.github.io/your-repository-name/)** *(Replace with your actual GitHub Pages URL)*
+👉 **[https://felipemelhoramento-bit.github.io/DigitalEggYolkColorAnalyzer/](https://felipemelhoramento-bit.github.io/DigitalEggYolkColorAnalyzer/)**
 
 ---
 
@@ -46,15 +46,15 @@ Access the live web application on any device via GitHub Pages:
 If you use this software, its underlying algorithm, or code in your research, academic publications, or commercial benchmarks, please cite the foundational repository as follows:
 
 ### APA Format
-> Costa, Maria Letícia Martins; Silva, Wallace Gomes da; Ferreira, F., & Silva, F. G. (2026). *Digital Egg Yolk Color Analyzer*. GitHub Repository. [https://github.com/your-username/yolkfan-analyzer](https://github.com/your-username/yolkfan-analyzer)
+> Costa, Maria Letícia Martins; Silva, Wallace Gomes da; Ferreira, F., & Silva, F. G. (2026). *Digital Egg Yolk Color Analyzer*. GitHub Repository. [https://github.com/felipemelhoramento-bit/DigitalEggYolkColorAnalyzer](https://github.com/felipemelhoramento-bit/DigitalEggYolkColorAnalyzer)
 
 ### BibTeX Format
 ```bibtex
-@software{Digital Egg Yolk Color Analyzer,
-  author    = {Costa, Maria Letícia Martins; Silva, Wallace Gomes da; Ferreira, Fabiana and Silva, Felipe Gomes da},
-  title     = {Digital Egg Yolk Color Analyzer,
+@software{DigitalEggYolkColorAnalyzer2026,
+  author    = {Costa, Maria Letícia Martins and Silva, Wallace Gomes da and Ferreira, Fabiana and Silva, Felipe Gomes da},
+  title     = {Digital Egg Yolk Color Analyzer},
   year      = {2026},
   publisher = {GitHub},
   journal   = {GitHub repository},
-  url       = {[https://github.com/your-username/yolkfan-analyzer](https://github.com/your-username/yolkfan-analyzer)}
+  url       = {[https://github.com/felipemelhoramento-bit/DigitalEggYolkColorAnalyzer](https://github.com/felipemelhoramento-bit/DigitalEggYolkColorAnalyzer)}
 }
