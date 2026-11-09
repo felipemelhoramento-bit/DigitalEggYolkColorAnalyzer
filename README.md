@@ -46,7 +46,7 @@ Access the live web application on any device via GitHub Pages:
 If you use this software, its underlying algorithm, or code in your research, academic publications, or commercial benchmarks, please cite the foundational repository as follows:
 
 ### APA Format
-> Ferreira, F., & Silva, F. G. (2026). *YolkFan Real-Time Analyzer: An HTML5/JavaScript application for egg yolk color classification*. GitHub Repository. [https://github.com/your-username/yolkfan-analyzer](https://github.com/your-username/yolkfan-analyzer)
+> Costa, Maria Letícia Martins; Silva, Wallace Gomes da; Ferreira, F., & Silva, F. G. (2026). *Digital Egg Yolk Color Analyzer*. GitHub Repository. [https://github.com/your-username/yolkfan-analyzer](https://github.com/your-username/yolkfan-analyzer)
 
 ### BibTeX Format
 ```bibtex
