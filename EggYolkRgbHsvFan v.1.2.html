@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>YolkFan Real-Time Analyzer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
+        .shape-circle { clip-path: circle(50% at 50% 50%); }
+        .shape-transition { transition: width 0.1s ease-out, height 0.1s ease-out; }
+        .no-scrollbar::-webkit-scrollbar { height: 4px; }
+        .no-scrollbar::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); border-radius: 4px; }
+        .no-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.5); border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full overflow-hidden flex flex-col select-none">
+
+    <!-- Notificação Flutuante / Toast -->
+    <div id="toast" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900/90 border border-slate-700 text-slate-200 px-4 py-2 rounded-xl shadow-2xl backdrop-blur-md opacity-0 pointer-events-none transition-all duration-300 text-sm flex items-center gap-2">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-msg">Mensagem</span>
+    </div>
+
+    <!-- HEADER / BARRA SUPERIOR -->
+    <header class="relative z-20 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 py-2 flex items-center justify-between gap-2 shadow-lg overflow-x-auto no-scrollbar">
+        <div class="flex items-center gap-2 shrink-0">
+            <div class="bg-amber-500 p-2 rounded-xl text-slate-950 shadow-inner flex items-center justify-center w-8 h-8 font-extrabold">
+                <i class="fa-solid fa-egg text-sm"></i>
+            </div>
+            <div class="hidden sm:block">
+                <h1 class="font-bold text-xs tracking-wide bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">YolkFan Analyzer</h1>
+                <p class="text-[9px] text-slate-400">Análise de Cor da Gema (1-16)</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2.5 shrink-0">
+            <!-- Slider de Tamanho da FC + Botões Copy, Flip e Freeze à Direita -->
+            <div class="flex items-center gap-2 bg-slate-950/70 px-2.5 py-1 rounded-xl border border-slate-800/80">
+                <i class="fa-solid fa-compress text-[10px] text-slate-400" title="Reduzir"></i>
+                <input type="range" id="size-slider" min="100" max="360" value="240" step="10" oninput="updateFCSize(this.value)" class="w-20 sm:w-28 accent-amber-500 cursor-pointer h-1 bg-slate-700 rounded-lg">
+                <i class="fa-solid fa-expand text-[10px] text-slate-400" title="Expandir"></i>
+                <span id="size-label" class="text-[10px] font-mono text-amber-400 w-7 text-right">240px</span>
+
+                <div class="h-4 w-[1px] bg-slate-800 my-auto ml-1"></div>
+
+                <!-- Grupo de Ações (Copy, Flip, Freeze) -->
+                <div class="flex items-center gap-1.5">
+                    <button onclick="copyValues()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1 transition-all active:scale-95" title="Copy Report">
+                        <i class="fa-regular fa-copy text-[11px]"></i> Copy
+                    </button>
+                    <button onclick="switchCamera()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2.5 py-1 rounded-lg border border-slate-700 flex items-center gap-1 transition-all active:scale-95" title="Flip Camera">
+                        <i class="fa-solid fa-camera-rotate text-[11px]"></i> Flip
+                    </button>
+                    <button onclick="toggleFreeze()" id="freeze-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1 rounded-lg border border-emerald-500/50 flex items-center gap-1 transition-all active:scale-95 shadow-md" title="Freeze / Resume">
+                        <i class="fa-solid fa-pause text-[11px]" id="freeze-icon"></i> Freeze
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ÁREA CENTRAL -->
+    <main class="relative flex-1 bg-slate-950 flex items-center justify-center overflow-hidden">
+        <video id="webcam" autoplay playsinline muted class="hidden"></video>
+        <canvas id="processing-canvas" class="hidden"></canvas>
+
+        <div class="relative w-full h-full flex items-center justify-center bg-black">
+            <canvas id="display-canvas" class="w-full h-full object-cover"></canvas>
+
+            <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div id="central-figure-wrapper" style="width: 240px; height: 240px;" class="relative pointer-events-auto cursor-crosshair flex items-center justify-center">
+                    <svg id="central-svg-border" class="absolute inset-0 w-full h-full pointer-events-none z-10" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="48" fill="none" stroke="#22d3ee" stroke-width="2.5" />
+                    </svg>
+
+                    <div id="central-figure" class="w-full h-full shape-circle shape-transition bg-transparent overflow-hidden">
+                        <canvas id="fc-canvas" class="hidden"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loading-overlay" class="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center gap-3 z-30 transition-opacity duration-500">
+                <div class="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-sm font-medium text-slate-300">Inicializando câmera e processador...</p>
+                <button onclick="initCamera()" class="mt-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl shadow-md transition-all">
+                    Permitir / Iniciar Manualmente
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- PAINEL INFERIOR: DASHBOARD EM LINHA ÚNICA -->
+    <footer class="relative z-20 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 p-2.5 sm:p-3 shadow-2xl flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+        <div class="flex items-center gap-3 shrink-0">
+            <div id="color-preview" class="w-7 h-7 rounded-lg border border-slate-600 shadow-inner bg-black shrink-0" title="Cor Amostrada"></div>
+            
+            <!-- RGB Stats -->
+            <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-semibold text-slate-400 uppercase">RGB:</span>
+                <span id="rgb-stats-values" class="font-mono text-cyan-400 text-[10px] font-bold bg-slate-950 px-2 py-1 rounded border border-slate-800">Mean: 0,0,0 | Median: 0,0,0</span>
+            </div>
+
+            <!-- HSV Stats -->
+            <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-semibold text-slate-400 uppercase">HSV:</span>
+                <span id="hsv-stats-values" class="font-mono text-emerald-400 text-[10px] font-bold bg-slate-950 px-2 py-1 rounded border border-slate-800">Mean: 0°,0%,0% | Median: 0°,0%,0%</span>
+            </div>
+
+            <!-- ESTRUTURA 1: MEAN YOLKFAN + COR + CAIXA DE COR -->
+            <div class="flex items-center gap-2 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 shrink-0">
+                <div id="rec-color-box-mean" class="w-4 h-4 rounded border border-slate-600 shadow-inner bg-black"></div>
+                <div class="flex items-center gap-1">
+                    <span id="yf-mean-display" class="text-xs font-mono font-extrabold text-amber-400">Mean --</span>
+                    <span class="text-slate-600 text-xs">|</span>
+                    <span id="yf-color-name-mean" class="text-xs font-semibold text-slate-200">--</span>
+                </div>
+            </div>
+
+            <!-- ESTRUTURA 2: MEDIAN YOLKFAN + COR + CAIXA DE COR -->
+            <div class="flex items-center gap-2 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 shrink-0">
+                <div id="rec-color-box-median" class="w-4 h-4 rounded border border-slate-600 shadow-inner bg-black"></div>
+                <div class="flex items-center gap-1">
+                    <span id="yf-median-display" class="text-xs font-mono font-extrabold text-amber-400">Median --</span>
+                    <span class="text-slate-600 text-xs">|</span>
+                    <span id="yf-color-name-median" class="text-xs font-semibold text-slate-200">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0 border-l border-slate-800 pl-2.5">
+            <div class="bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-800 text-[10px] flex items-center gap-1">
+                <span class="text-slate-400">Pixels:</span>
+                <span id="total-pixels-count" class="font-mono font-bold text-amber-400">0</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let videoElement = document.getElementById('webcam');
+        let displayCanvas = document.getElementById('display-canvas');
+        let displayCtx = displayCanvas.getContext('2d', { willReadFrequently: true });
+        let processingCanvas = document.getElementById('processing-canvas');
+        let fcCanvas = document.getElementById('fc-canvas');
+        let fcCtx = fcCanvas.getContext('2d', { willReadFrequently: true });
+
+        let currentFacingMode = 'user';
+        let isFrozen = false;
+        let animationFrameId = null;
+
+        let meanR = 0, meanG = 0, meanB = 0;
+        let medianR = 0, medianG = 0, medianB = 0;
+        let meanH = 0, meanS = 0, meanV = 0;
+        let medianH = 0, medianS = 0, medianV = 0;
+        
+        let currentMeanMatch = null;
+        let currentMedianMatch = null;
+
+        const YOLKFAN_TABLE = [
+            { level: 1,  r: 255, g: 240, b: 160, hex: "#FFF0A0", name: "Amarelo Muito Pálido" },
+            { level: 2,  r: 255, g: 230, b: 120, hex: "#FFE678", name: "Amarelo Pálido" },
+            { level: 3,  r: 255, g: 222, b: 80,  hex: "#FFDE50", name: "Amarelo Claro" },
+            { level: 4,  r: 255, g: 215, b: 40,  hex: "#FFD728", name: "Amarelo" },
+            { level: 5,  r: 255, g: 205, b: 0,   hex: "#FFCD00", name: "Amarelo Gema Padrão" },
+            { level: 6,  r: 255, g: 195, b: 0,   hex: "#FFC300", name: "Amarelo Intenso" },
+            { level: 7,  r: 255, g: 185, b: 0,   hex: "#B9B900", name: "Amarelo Ouro (Base)" },
+            { level: 8,  r: 255, g: 170, b: 0,   hex: "#FFAA00", name: "Laranja Claro" },
+            { level: 9,  r: 255, g: 155, b: 0,   hex: "#FF9B00", name: "Laranja" },
+            { level: 10, r: 255, g: 140, b: 0,   hex: "#FF8C00", name: "Laranja Intenso" },
+            { level: 11, r: 255, g: 125, b: 0,   hex: "#FF7D00", name: "Laranja Escuro" },
+            { level: 12, r: 255, g: 110, b: 0,   hex: "#FF6E00", name: "Laranja Avermelhado (Pref. Global)" },
+            { level: 13, r: 255, g: 95,  b: 0,   hex: "#FF5F00", name: "Laranja Avermelhado Escuro" },
+            { level: 14, r: 250, g: 80,  b: 0,   hex: "#FA5000", name: "Vermelho Alaranjado" },
+            { level: 15, r: 240, g: 65,  b: 0,   hex: "#F04100", name: "Vermelho Alaranjado Intenso" },
+            { level: 16, r: 230, g: 50,  b: 0,   hex: "#E63200", name: "Laranja Profundo / Avermelhado" }
+        ];
+
+        function rgbToHsv(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, v = max;
+            let d = max - min;
+            s = max === 0 ? 0 : d / max;
+            if (max === min) {
+                h = 0;
+            } else {
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return [Math.round(h * 360), Math.round(s * 100), Math.round(v * 100)];
+        }
+
+        YOLKFAN_TABLE.forEach(item => {
+            const sum = item.r + item.g + item.b;
+            item.normR = item.r / sum;
+            item.normG = item.g / sum;
+            item.hsv = rgbToHsv(item.r, item.g, item.b);
+        });
+
+        window.addEventListener('load', () => { initCamera(); });
+
+        async function initCamera() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            try {
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: currentFacingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: false
+                    });
+                    videoElement.srcObject = stream;
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play();
+                        resizeCanvases();
+                        loadingOverlay.style.opacity = '0';
+                        setTimeout(() => loadingOverlay.classList.add('hidden'), 500);
+                        if (!animationFrameId) requestAnimationFrame(processFrame);
+                        showToast('Câmera conectada com sucesso!', 'success');
+                    };
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Erro ao acessar a câmera.', 'error');
+            }
+        }
+
+        function resizeCanvases() {
+            if (!videoElement.videoWidth) return;
+            displayCanvas.width = videoElement.videoWidth;
+            displayCanvas.height = videoElement.videoHeight;
+            processingCanvas.width = videoElement.videoWidth;
+            processingCanvas.height = videoElement.videoHeight;
+            fcCanvas.width = 300;
+            fcCanvas.height = 300;
+        }
+
+        window.addEventListener('resize', resizeCanvases);
+
+        function switchCamera() {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            if (videoElement.srcObject) videoElement.srcObject.getTracks().forEach(t => t.stop());
+            initCamera();
+        }
+
+        function updateFCSize(sizeVal) {
+            const centralWrapper = document.getElementById('central-figure-wrapper');
+            centralWrapper.style.width = `${sizeVal}px`;
+            centralWrapper.style.height = `${sizeVal}px`;
+            document.getElementById('size-label').textContent = `${sizeVal}px`;
+        }
+
+        function toggleFreeze() {
+            isFrozen = !isFrozen;
+            const freezeBtn = document.getElementById('freeze-btn');
+            if (isFrozen) {
+                freezeBtn.classList.replace('bg-emerald-600', 'bg-amber-600');
+                freezeBtn.innerHTML = `<i class="fa-solid fa-play text-[11px]"></i> Freeze`;
+                showToast('Amostra congelada.', 'info');
+            } else {
+                freezeBtn.classList.replace('bg-amber-600', 'bg-emerald-600');
+                freezeBtn.innerHTML = `<i class="fa-solid fa-pause text-[11px]" id="freeze-icon"></i> Freeze`;
+                showToast('Amostragem retomada.', 'success');
+                requestAnimationFrame(processFrame);
+            }
+        }
+
+        function processFrame() {
+            if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA && !isFrozen) {
+                const vW = videoElement.videoWidth;
+                const vH = videoElement.videoHeight;
+                if (displayCanvas.width !== vW || displayCanvas.height !== vH) resizeCanvases();
+
+                displayCtx.drawImage(videoElement, 0, 0, vW, vH);
+
+                const rect = document.getElementById('central-figure').getBoundingClientRect();
+                const containerRect = displayCanvas.getBoundingClientRect();
+                const scaleX = vW / containerRect.width;
+                const scaleY = vH / containerRect.height;
+
+                const srcX = (rect.left - containerRect.left) * scaleX;
+                const srcY = (rect.top - containerRect.top) * scaleY;
+                const srcW = rect.width * scaleX;
+                const srcH = rect.height * scaleY;
+
+                fcCtx.clearRect(0, 0, fcCanvas.width, fcCanvas.height);
+                fcCtx.drawImage(videoElement, srcX, srcY, srcW, srcH, 0, 0, fcCanvas.width, fcCanvas.height);
+
+                processYolkFanAnalysis(fcCtx, fcCanvas.width, fcCanvas.height);
+            }
+            if (!isFrozen) animationFrameId = requestAnimationFrame(processFrame);
+        }
+
+        function getMedian(arr) {
+            if (arr.length === 0) return 0;
+            const sorted = arr.slice().sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 !== 0 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+        }
+
+        // Função de busca pela menor distância cromática/HSV
+        function findClosestYolkMatch(r, g, b, h) {
+            let closestItem = YOLKFAN_TABLE[0];
+            let minScore = Infinity;
+
+            const sum = r + g + b;
+            const sampleNormR = sum > 0 ? r / sum : 0;
+            const sampleNormG = sum > 0 ? g / sum : 0;
+
+            for (let i = 0; i < YOLKFAN_TABLE.length; i++) {
+                const item = YOLKFAN_TABLE[i];
+                
+                let diffHue = Math.abs(h - item.hsv[0]);
+                if (diffHue > 180) diffHue = 360 - diffHue;
+                const normHueDist = diffHue / 180;
+
+                const cromaDist = Math.sqrt(
+                    Math.pow(sampleNormR - item.normR, 2) + 
+                    Math.pow(sampleNormG - item.normG, 2)
+                );
+
+                const score = (0.70 * normHueDist) + (0.30 * cromaDist);
+
+                if (score < minScore) {
+                    minScore = score;
+                    closestItem = item;
+                }
+            }
+            return closestItem;
+        }
+
+        function processYolkFanAnalysis(ctx, width, height) {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            
+            const rValues = [], gValues = [], bValues = [];
+            let sumR = 0, sumG = 0, sumB = 0;
+            
+            const cx = width / 2;
+            const cy = height / 2;
+            const radius = width / 2;
+
+            const step = 2;
+            for (let y = 0; y < height; y += step) {
+                for (let x = 0; x < width; x += step) {
+                    const dx = x - cx;
+                    const dy = y - cy;
+                    
+                    if ((dx * dx + dy * dy) <= (radius * radius)) {
+                        const index = (y * width + x) * 4;
+                        const r = data[index];
+                        const g = data[index + 1];
+                        const b = data[index + 2];
+
+                        const brightness = (r + g + b) / 3;
+                        if (r >= 80 && brightness >= 45 && brightness <= 248) {
+                            rValues.push(r);
+                            gValues.push(g);
+                            bValues.push(b);
+                            sumR += r; sumG += g; sumB += b;
+                        }
+                    }
+                }
+            }
+
+            const totalValidPixels = rValues.length;
+
+            if (totalValidPixels > 0) {
+                meanR = Math.round(sumR / totalValidPixels);
+                meanG = Math.round(sumG / totalValidPixels);
+                meanB = Math.round(sumB / totalValidPixels);
+
+                medianR = getMedian(rValues);
+                medianG = getMedian(gValues);
+                medianB = getMedian(bValues);
+
+                const hsvMean = rgbToHsv(meanR, meanG, meanB);
+                meanH = hsvMean[0]; meanS = hsvMean[1]; meanV = hsvMean[2];
+
+                const hsvMed = rgbToHsv(medianR, medianG, medianB);
+                medianH = hsvMed[0]; medianS = hsvMed[1]; medianV = hsvMed[2];
+            } else {
+                meanR = 0; meanG = 0; meanB = 0;
+                medianR = 0; medianG = 0; medianB = 0;
+                meanH = 0; meanS = 0; meanV = 0;
+                medianH = 0; medianS = 0; medianV = 0;
+            }
+
+            // Exibição dos dados RGB e HSV
+            document.getElementById('rgb-stats-values').textContent = `Mean: ${meanR},${meanG},${meanB} | Median: ${medianR},${medianG},${medianB}`;
+            document.getElementById('hsv-stats-values').textContent = `Mean: ${meanH}°,${meanS}%,${meanV}% | Median: ${medianH}°,${medianS}%,${medianV}%`;
+            
+            document.getElementById('color-preview').style.backgroundColor = `rgb(${medianR}, ${medianG}, ${medianB})`;
+            document.getElementById('total-pixels-count').textContent = totalValidPixels;
+
+            // 1. CÁLCULO BASEADO NAS MÉDIAS
+            currentMeanMatch = findClosestYolkMatch(meanR, meanG, meanB, meanH);
+            document.getElementById('yf-mean-display').textContent = `Mean ${currentMeanMatch.level}`;
+            document.getElementById('yf-color-name-mean').textContent = currentMeanMatch.name;
+            document.getElementById('rec-color-box-mean').style.backgroundColor = currentMeanMatch.hex;
+
+            // 2. CÁLCULO BASEADO NAS MEDIANAS
+            currentMedianMatch = findClosestYolkMatch(medianR, medianG, medianB, medianH);
+            document.getElementById('yf-median-display').textContent = `Median ${currentMedianMatch.level}`;
+            document.getElementById('yf-color-name-median').textContent = currentMedianMatch.name;
+            document.getElementById('rec-color-box-median').style.backgroundColor = currentMedianMatch.hex;
+        }
+
+        function copyValues() {
+            if (!currentMeanMatch || !currentMedianMatch) return;
+            let report = `YolkFan Real-Time Analyzer - Relatório de Cor\n`;
+            report += `----------------------------------------\n`;
+            report += `Resultado (Média): Mean ${currentMeanMatch.level} (${currentMeanMatch.name})\n`;
+            report += `Resultado (Mediana): Median ${currentMedianMatch.level} (${currentMedianMatch.name})\n`;
+            report += `RGB Mean: R:${meanR} G:${meanG} B:${meanB} | Median: R:${medianR} G:${medianG} B:${medianB}\n`;
+            report += `HSV Mean: H:${meanH}° S:${meanS}% V:${meanV}% | Median: H:${medianH}° S:${medianS}% V:${medianV}%\n`;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(report).then(() => showToast('Relatório copiado!', 'success'));
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = message;
+            toast.classList.replace('opacity-0', 'opacity-100');
+            toast.classList.remove('pointer-events-none');
+            setTimeout(() => {
+                toast.classList.replace('opacity-100', 'opacity-0');
+                toast.classList.add('pointer-events-none');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
