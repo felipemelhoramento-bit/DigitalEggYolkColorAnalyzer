@@ -1,4 +1,4 @@
-# 🥚 YolkFan Real-Time Analyzer
+# 🥚 Yolk RGB/HSV/FAN Real-Time Analyzer
 
 An open-source, client-side HTML5/JavaScript application designed for real-time egg yolk color classification (DSM YolkFan™ levels 1–16) and RGB colorimetry analysis using standard webcam or mobile camera feeds.
 
